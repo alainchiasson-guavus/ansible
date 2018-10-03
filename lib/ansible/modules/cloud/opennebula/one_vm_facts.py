@@ -7,6 +7,7 @@ __metaclass__ = type
 
 """
 (c) 2018, Milan Ilic <milani@nordeus.com>
+(c) 2018, Alain Chiasson <alain@chiasson.org>
 
 This file is part of Ansible
 
@@ -31,9 +32,9 @@ ANSIBLE_METADATA = {'status': ['preview'],
 DOCUMENTATION = '''
 ---
 module: one_vm_facts
-short_description: Gather facts about OpenNebula vm
+short_description: Gather facts about OpenNebula virtaul machines
 description:
-  - Gather facts about OpenNebula vm
+  - Gather facts about OpenNebula virtaul machines
 version_added: "2.6"
 requirements:
   - python-oca
@@ -54,22 +55,23 @@ options:
       - then the value of the C(ONE_PASSWORD) environment variable is used.
   ids:
     description:
-      - A list of vm ids whose facts you want to gather.
+      - A list of VM ids whose facts you want to gather.
     aliases: ['id']
   name:
     description:
       - A C(name) of the vms whose facts will be gathered.
       - If the C(name) begins with '~' the C(name) will be used as regex pattern
-      - which restricts the list of vmss (whose facts will be returned) whose names match specified regex.
+      - which restricts the list of vms (whose facts will be returned) whose names match specified regex.
       - Also, if the C(name) begins with '~*' case-insensitive matching will be performed.
       - See examples for more details.
 author:
     - "Milan Ilic (@ilicmilan)"
+    - "Alain Chiasson (@alainchiasson)"
 '''
 
 EXAMPLES = '''
-# Gather facts about all vmss
-- one_vms_facts:
+# Gather facts about all vms
+- one_vm_facts:
   register: result
 
 # Print all vmss facts
@@ -77,29 +79,29 @@ EXAMPLES = '''
     msg: result
 
 # Gather facts about an vms using ID
-- one_vms_facts:
+- one_vm_facts:
     ids:
       - 123
 
 # Gather facts about an vms using the name
-- one_vms_facts:
+- one_vm_facts:
     name: 'foo-vms'
   register: foo_vms
 
 # Gather facts about all vmss whose name matches regex 'app-vms-.*'
-- one_vms_facts:
-    name: '~app-vms-.*'
-  register: app_vmss
+- one_vm_facts:
+    name: '~app-vm-.*'
+  register: app_vms
 
 # Gather facts about all vmss whose name matches regex 'foo-vms-.*' ignoring cases
-- one_vms_facts:
-    name: '~*foo-vms-.*'
-  register: foo_vmss
+- one_vm_facts:
+    name: '~*foo-vm-.*'
+  register: foo_vms
 '''
 
 RETURN = '''
-vmss:
-    description: A list of vmss info
+vms:
+    description: A list of vms info
     type: complex
     returned: success
     contains:
@@ -131,14 +133,56 @@ vmss:
             description: state of vms instance
             type: string
             sample: READY
-        used:
-            description: is vms in use
-            type: bool
-            sample: true
-        running_vms:
-            description: count of running vms that use this vms
-            type: int
-            sample: 7
+
+        memory:
+            description:
+              - The size of the memory for new instances (in MB, GB, ...)
+        disk_size:
+            description:
+              - The size of the disk created for new instances (in MB, GB, TB,...).
+              - NOTE':' This option can be used only if the VM template specified with
+              - C(template_id)/C(template_name) has exactly one disk.
+        cpu:
+            description:
+              - Percentage of CPU divided by 100 required for the new instance. Half a
+              - processor is written 0.5.
+        vcpu:
+            description:
+              - Number of CPUs (cores) new VM will have.
+        networks:
+            description:
+              - A list of dictionaries with network parameters. See examples for more details.
+            default: []
+        mode:
+            description:
+              - Set permission mode of the instance in octet format, e.g. C(600) to give owner C(use) and C(manage) and nothing to group and others.
+        labels:
+            description:
+              - A list of labels to associate with new instances, or for setting
+              - C(state) of instances with these labels.
+            default: []
+        attributes:
+            description:
+              - A dictionary of key/value attributes to add to new instances, or for
+              - setting C(state) of instances with these attributes.
+              - Keys are case insensitive and OpenNebula automatically converts them to upper case.
+              - Be aware C(NAME) is a special attribute which sets the name of the VM when it's deployed.
+              - C(#) character(s) can be appended to the C(NAME) and the module will automatically add
+              - indexes to the names of VMs.
+              - For example':' C(NAME':' foo-###) would create VMs with names C(foo-000), C(foo-001),...
+              - When used with C(count_attributes) and C(exact_count) the module will
+              - match the base name without the index part.
+            default: {}
+        lcm_state:
+            description:
+              - The Life cycle state of an Active VM
+              - See `Virtual Machine State reference <http://docs.opennebula.org/5.6/operation/references/vm_states.html#vm-states>`
+            default: string
+        uptime_h:
+            description:
+                - uptime in hours. Rounded.
+
+
 '''
 
 try:
